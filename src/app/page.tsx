@@ -1,38 +1,15 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { BookOpen, Brain, Zap, FileText, Upload, ArrowRight, FileUp, Type, Sparkles } from "lucide-react"
-import Image from "next/image";
+import Image from "next/image"
+import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs"
+import Link from "next/link"
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-2 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Image
-                src="/images/logo.png"
-                alt="Owl with a graduation hat"
-                width={50}
-                height={50}
-                className="w-full h-auto"
-                priority
-              />
-              <span className="ml-2 text-xl font-bold text-foreground">LastMinuteLearner</span>
-            </div>
-            <div className="hidden md:flex items-center space-x-8">
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
-              <Button size="sm">Get Started</Button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-background to-muted/20">
+      <section className="relative overflow-hidden">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
@@ -46,12 +23,28 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="text-lg px-8">
-                  Start Learning Today
-                </Button>
-                <Button variant="outline" size="lg" className="text-lg px-8 bg-transparent">
-                  Watch Demo
-                </Button>
+                <SignedOut>
+                  <SignUpButton mode="modal">
+                    <Button size="lg" className="text-lg px-8">
+                      Start Learning Today
+                    </Button>
+                  </SignUpButton>
+                  <SignInButton mode="modal">
+                    <Button variant="outline" size="lg" className="text-lg px-8 bg-transparent">
+                      Sign In
+                    </Button>
+                  </SignInButton>
+                </SignedOut>
+                <SignedIn>
+                  <Link href="/dashboard">
+                    <Button size="lg" className="text-lg px-8">
+                      Go to Dashboard
+                    </Button>
+                  </Link>
+                  <Button variant="outline" size="lg" className="text-lg px-8 bg-transparent">
+                    Watch Demo
+                  </Button>
+                </SignedIn>
               </div>
             </div>
             <div className="relative">
@@ -65,13 +58,13 @@ export default function Home() {
                   priority
                 />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-2xl blur-3xl transform scale-110 -z-10" />
+              <div className="absolute inset-20 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-2xl blur-3xl -z-10" />
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-20 lg:py-32 bg-muted/30">
+      <section className="py-20 lg:py-32">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-balance">
@@ -88,7 +81,7 @@ export default function Home() {
             {/* Input Sources */}
             <div className="grid md:grid-cols-2 gap-8 mb-12">
               <div className="relative">
-                <Card className="border-2 border-dashed border-primary/30 hover:border-primary/60 transition-colors bg-primary/5">
+                <Card className="border-2 border-dashed border-primary/30 hover:border-primary/60 transition-colors">
                   <CardContent className="p-8 text-center space-y-4">
                     <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
                       <FileUp className="h-10 w-10 text-primary" />
@@ -113,7 +106,7 @@ export default function Home() {
               </div>
 
               <div className="relative">
-                <Card className="border-2 border-dashed border-accent/30 hover:border-accent/60 transition-colors bg-accent/5">
+                <Card className="border-2 border-dashed border-accent/30 hover:border-accent/60 transition-colors">
                   <CardContent className="p-8 text-center space-y-4">
                     <div className="w-20 h-20 bg-accent/20 rounded-full flex items-center justify-center mx-auto">
                       <Type className="h-10 w-10 text-accent" />
@@ -203,7 +196,7 @@ export default function Home() {
             </div>
 
             {/* Process Steps */}
-            <div className="mt-16 bg-card border border-border/50 rounded-2xl p-8 max-w-4xl mx-auto">
+            <div className="mt-16 border border-border/50 rounded-2xl p-8 max-w-4xl mx-auto">
               <div className="text-center space-y-6">
                 <h3 className="text-2xl font-semibold">How It Works</h3>
                 <div className="grid md:grid-cols-3 gap-8">
@@ -253,12 +246,19 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-muted/30">
+      <footer className="border-t border-border">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="space-y-4">
               <div className="flex items-center">
-                <BookOpen className="h-6 w-6 text-primary" />
+                <Image
+                  src="/images/logo.png"
+                  alt="Owl with a graduation hat"
+                  width={50}
+                  height={50}
+                  className="w-12 h-12"
+                  priority
+                />
                 <span className="ml-2 text-lg font-bold">LastMinuteLearner</span>
               </div>
               <p className="text-muted-foreground text-sm">
@@ -348,5 +348,5 @@ export default function Home() {
         </div>
       </footer>
     </div>
-  );
+  )
 }
