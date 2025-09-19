@@ -4,10 +4,20 @@ import { BookOpen, Brain, Zap, FileText, Upload, ArrowRight, FileUp, Type, Spark
 import Image from "next/image"
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs"
 import Link from "next/link"
+import { RedirectOnSignedIn } from "@/components/redirect-on-signed-in"
+import { auth } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
 
-export default function Home() {
+export default async function Home() {
+  const { userId } = await auth();
+
+  if (userId) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="min-h-screen">
+      <RedirectOnSignedIn to="/dashboard" />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">

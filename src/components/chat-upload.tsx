@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -12,56 +11,66 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
 
-const uploadSchema = z.object({
-  prompt: z.string().optional(),
-})
+// ✅ All validation lives here now
+const uploadSchema = z
+  .object({
+    prompt: z.string().optional(),
+    file: z
+      .instanceof(File)
+      .optional()
+      .refine((f) => !f || f.type === "application/pdf", "Only PDF files are allowed")
+      .refine((f) => !f || f.size <= 10 * 1024 * 1024, "File size must be less than 10MB"),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.prompt?.trim() && !data.file) {
+      ctx.addIssue({
+        code: "custom",          // ✅ recommended
+        message: "Please provide either a prompt or upload a PDF file",
+        path: ["prompt"],
+      })
+    }
+  })
 
 type UploadFormData = z.infer<typeof uploadSchema>
 
 export function ChatUpload() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [fileError, setFileError] = useState<string>("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<UploadFormData>({
     resolver: zodResolver(uploadSchema),
     defaultValues: {
       prompt: "",
+      file: undefined,
     },
   })
 
-  const validateSubmission = () => {
-    const prompt = form.getValues("prompt")?.trim()
-    const hasPrompt = Boolean(prompt)
-    const hasFile = Boolean(selectedFile)
-
-    if (!hasPrompt && !hasFile) {
-      form.setError("prompt", { message: "Please provide either a prompt or upload a PDF file" })
-      return false
-    }
-
-    if (selectedFile) {
-      if (selectedFile.type !== "application/pdf") {
-        setFileError("Only PDF files are allowed")
-        return false
-      }
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        setFileError("File size must be less than 10MB")
-        return false
-      }
-    }
-
-    setFileError("")
-    return true
-  }
+  const selectedFile = form.watch("file")
 
   const onSubmit = async (data: UploadFormData) => {
-    if (!validateSubmission()) return
-
+    const {prompt, file} = data;
     setIsUploading(true)
     setUploadProgress(0)
+
+    // formdata for multipart/form-data
+    const formData = new FormData();
+    if (prompt) formData.append('prompt', prompt);
+    if (file) formData.append('file', file);
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/generate-reviewer`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Error: ' + JSON.stringify(err));
+      return;
+    }
+
+    const responseData = await res.json();
+    console.log(responseData);
 
     // Simulate upload progress
     const interval = setInterval(() => {
@@ -69,14 +78,12 @@ export function ChatUpload() {
         if (prev >= 100) {
           clearInterval(interval)
           setIsUploading(false)
-          if (selectedFile) {
+          if (data.file) {
             toast.success("PDF uploaded successfully! Processing started.")
           } else {
             toast.success("Prompt submitted successfully! Processing started.")
           }
           form.reset()
-          setSelectedFile(null)
-          setFileError("")
           if (fileInputRef.current) {
             fileInputRef.current.value = ""
           }
@@ -90,14 +97,7 @@ export function ChatUpload() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files.length > 0) {
-      const file = files[0]
-      setSelectedFile(file)
-      setFileError("")
-
-      // Clear prompt error if file is selected
-      if (form.formState.errors.prompt) {
-        form.clearErrors("prompt")
-      }
+      form.setValue("file", files[0], { shouldValidate: true })
     }
   }
 
@@ -106,19 +106,9 @@ export function ChatUpload() {
   }
 
   const handleRemoveFile = () => {
-    setSelectedFile(null)
-    setFileError("")
+    form.setValue("file", undefined, { shouldValidate: true })
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
-    }
-  }
-
-  const handlePromptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    form.setValue("prompt", e.target.value)
-
-    // Clear file error if prompt is entered
-    if (e.target.value.trim() && fileError) {
-      setFileError("")
     }
   }
 
@@ -143,7 +133,6 @@ export function ChatUpload() {
                 {...form.register("prompt")}
                 placeholder={selectedFile ? selectedFile.name : "Ask v0 to build... or upload a PDF"}
                 disabled={isUploading}
-                onChange={handlePromptChange}
                 className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground"
               />
             </div>
@@ -176,7 +165,9 @@ export function ChatUpload() {
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-foreground">{selectedFile.name}</span>
-              <span className="text-xs text-muted-foreground">({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+              <span className="text-xs text-muted-foreground">
+                ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+              </span>
             </div>
             <Button
               type="button"
@@ -194,8 +185,9 @@ export function ChatUpload() {
         {form.formState.errors.prompt && (
           <p className="text-sm text-destructive px-4">{form.formState.errors.prompt.message}</p>
         )}
-
-        {fileError && <p className="text-sm text-destructive px-4">{fileError}</p>}
+        {form.formState.errors.file && (
+          <p className="text-sm text-destructive px-4">{form.formState.errors.file.message}</p>
+        )}
 
         {isUploading && (
           <div className="space-y-2">
