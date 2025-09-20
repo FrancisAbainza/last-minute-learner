@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { ChatUpload } from "@/components/chat-upload"
-import { TopicsList } from "@/components/topics-list"
+import TopicsList from "@/components/topics-list"
+import { getStudyReviewers } from "./action"
 
 export default async function DashboardPage() {
   const { userId } = await auth()
@@ -10,9 +11,11 @@ export default async function DashboardPage() {
     redirect("/")
   }
 
+  const reviewers = await getStudyReviewers(userId);
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="bg-background">
+      <div className="container mx-auto px-4 py-8 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
@@ -23,7 +26,12 @@ export default async function DashboardPage() {
         <ChatUpload />
 
         {/* Topics List Component */}
-        <TopicsList />
+        <TopicsList topics={reviewers.map(reviewer => ({
+          id: reviewer.id,
+          title: reviewer.title,
+          description: reviewer.description,
+          createdAt: reviewer.createdAt.toLocaleDateString('en-US') ,
+        }))} />
       </div>
     </div>
   )

@@ -5,26 +5,27 @@ import { useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { Plus, ArrowUp, X, FileText } from "lucide-react"
+import { Plus, ArrowUp, X, FileText, Loader2 } from "lucide-react" // added Loader2
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
+import { insertReviewer } from "@/app/dashboard/action"
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation"
 
-// ✅ All validation lives here now
+// ✅ validation schema
 const uploadSchema = z
   .object({
     prompt: z.string().optional(),
     file: z
       .instanceof(File)
       .optional()
-      .refine((f) => !f || f.type === "application/pdf", "Only PDF files are allowed")
-      .refine((f) => !f || f.size <= 10 * 1024 * 1024, "File size must be less than 10MB"),
+      .refine((f) => !f || f.type === "application/pdf", "Only PDF files are allowed"),
   })
   .superRefine((data, ctx) => {
     if (!data.prompt?.trim() && !data.file) {
       ctx.addIssue({
-        code: "custom",          // ✅ recommended
+        code: "custom",
         message: "Please provide either a prompt or upload a PDF file",
         path: ["prompt"],
       })
@@ -35,8 +36,9 @@ type UploadFormData = z.infer<typeof uploadSchema>
 
 export function ChatUpload() {
   const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { user } = useUser();
+  const router = useRouter();
 
   const form = useForm<UploadFormData>({
     resolver: zodResolver(uploadSchema),
@@ -49,49 +51,42 @@ export function ChatUpload() {
   const selectedFile = form.watch("file")
 
   const onSubmit = async (data: UploadFormData) => {
-    const {prompt, file} = data;
-    setIsUploading(true)
-    setUploadProgress(0)
+    if (!user) return;
 
-    // formdata for multipart/form-data
-    const formData = new FormData();
-    if (prompt) formData.append('prompt', prompt);
-    if (file) formData.append('file', file);
+    const { prompt, file } = data
+    setIsUploading(true)
+
+    const formData = new FormData()
+    if (prompt) formData.append("prompt", prompt)
+    if (file) formData.append("file", file)
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/generate-reviewer`, {
-      method: 'POST',
+      method: "POST",
       body: formData,
-    });
-    
+    })
+
     if (!res.ok) {
-      const err = await res.json();
-      alert('Error: ' + JSON.stringify(err));
-      return;
+      const err = await res.json()
+      toast.error("Error: " + JSON.stringify(err))
+      setIsUploading(false)
+      return
     }
 
-    const responseData = await res.json();
-    console.log(responseData);
+    // Insert data to database
+    const responseData = await res.json()
+    const reviewerData = {
+      userId: user.id,
+      ...responseData,
+    }
+    await insertReviewer(reviewerData);
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsUploading(false)
-          if (data.file) {
-            toast.success("PDF uploaded successfully! Processing started.")
-          } else {
-            toast.success("Prompt submitted successfully! Processing started.")
-          }
-          form.reset()
-          if (fileInputRef.current) {
-            fileInputRef.current.value = ""
-          }
-          return 100
-        }
-        return prev + 10
-      })
-    }, 200)
+    toast.success(
+      file ? "PDF uploaded successfully! Processing started." : "Study reviewer has been generated."
+    )
+    form.reset()
+    if (fileInputRef.current) fileInputRef.current.value = ""
+    setIsUploading(false)
+    router.refresh();
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,15 +96,12 @@ export function ChatUpload() {
     }
   }
 
-  const handlePlusButtonClick = () => {
-    fileInputRef.current?.click()
-  }
+  const handlePlusButtonClick = () => fileInputRef.current?.click()
 
-  const handleRemoveFile = () => {
+  // ✅ explicit annotation fixes TS7022
+  const handleRemoveFile: () => void = () => {
     form.setValue("file", undefined, { shouldValidate: true })
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
+    if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
   return (
@@ -154,7 +146,11 @@ export function ChatUpload() {
                 className="h-8 w-8 p-0 rounded-lg hover:bg-accent"
                 disabled={isUploading}
               >
-                <ArrowUp className="h-4 w-4" />
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" /> // spinner here
+                ) : (
+                  <ArrowUp className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>
@@ -187,16 +183,6 @@ export function ChatUpload() {
         )}
         {form.formState.errors.file && (
           <p className="text-sm text-destructive px-4">{form.formState.errors.file.message}</p>
-        )}
-
-        {isUploading && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Processing...</span>
-              <span>{uploadProgress}%</span>
-            </div>
-            <Progress value={uploadProgress} className="w-full" />
-          </div>
         )}
       </form>
     </div>

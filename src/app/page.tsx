@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { BookOpen, Brain, Zap, FileText, Upload, ArrowRight, FileUp, Type, Sparkles } from "lucide-react"
+import { Brain, Zap, FileText, Upload, ArrowRight, FileUp, Type, Sparkles } from "lucide-react"
 import Image from "next/image"
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs"
 import Link from "next/link"
@@ -123,7 +123,7 @@ export default async function Home() {
                     </div>
                     <h3 className="text-xl font-semibold">Describe Any Topic</h3>
                     <p className="text-foreground/80">
-                      Simply type what you want to study - from "photosynthesis" to "calculus derivatives"
+                      Simply type what you want to study - from &quot;photosynthesis&quot; to &quot;calculus derivatives&quot;
                     </p>
                     <div className="bg-muted/50 rounded-lg p-3 text-sm text-left font-mono">
                       <span className="text-muted-foreground">{">"}</span> Explain quantum mechanics basics...
@@ -153,7 +153,7 @@ export default async function Home() {
                   </div>
                   <h3 className="text-xl font-semibold">Smart Reviewers</h3>
                   <p className="text-muted-foreground text-sm">
-                    Comprehensive study guides with key concepts, summaries, and structured notes
+                    Comprehensive study guides with detailed reviewer, terminologies, and essential facts.
                   </p>
                   <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 text-xs">
                     <div className="space-y-1">
