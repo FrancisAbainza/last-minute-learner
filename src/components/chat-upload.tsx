@@ -81,7 +81,7 @@ export function ChatUpload() {
     await insertReviewer(reviewerData);
 
     toast.success(
-      file ? "PDF uploaded successfully! Processing started." : "Study reviewer has been generated."
+      file ? "PDF uploaded successfully! Study reviewer has been generated." : "Study reviewer has been generated."
     )
     form.reset()
     if (fileInputRef.current) fileInputRef.current.value = ""
@@ -123,7 +123,7 @@ export function ChatUpload() {
             <div className="flex-1">
               <Input
                 {...form.register("prompt")}
-                placeholder={selectedFile ? selectedFile.name : "Ask v0 to build... or upload a PDF"}
+                placeholder={selectedFile ? selectedFile.name : "Type a topic to generate... or upload a PDF"}
                 disabled={isUploading}
                 className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground"
               />

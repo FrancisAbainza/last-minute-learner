@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Brain, Zap, FileText, Upload, ArrowRight, FileUp, Type, Sparkles } from "lucide-react"
+import { Brain, Zap, FileText, Upload, ArrowRight, FileUp, Type, Sparkles, Github, Facebook, Linkedin, MapPin, Phone, Mail } from "lucide-react"
 import Image from "next/image"
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs"
 import Link from "next/link"
@@ -258,7 +258,7 @@ export default async function Home() {
       {/* Footer */}
       <footer className="border-t border-border">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-4">
               <div className="flex items-center">
                 <Image
@@ -276,82 +276,52 @@ export default async function Home() {
                 learning experiences.
               </p>
             </div>
+
+            {/* Contact Information */}
             <div className="space-y-4">
-              <h4 className="font-semibold">Product</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    AI Study Tools
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    PDF Converter
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    Flashcards
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    Quizzes
-                  </a>
-                </li>
-              </ul>
+              <h3 className="text-lg font-semibold">Contacts</h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="h-4 w-4" />
+                  <span>francisabainza714@gmail.com</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-4 w-4" />
+                  <span>(+63)985 122 0427</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>San Pedro, Laguna, Philippines 4023</span>
+                </div>
+              </div>
             </div>
+            
+            {/* Social Media */}
             <div className="space-y-4">
-              <h4 className="font-semibold">Support</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    Help Center
+              <h3 className="text-lg font-semibold">Get In Touch</h3>
+              <div className="flex gap-2">
+                <Button variant="outline" size="icon" asChild>
+                  <a href="https://github.com/FrancisAbainza" target="_blank" rel="noopener noreferrer">
+                    <Github className="h-4 w-4" />
+                    <span className="sr-only">Facebook</span>
                   </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    Contact Us
+                </Button>
+                <Button variant="outline" size="icon" asChild>
+                  <a href="https://www.facebook.com/francisrafael.abainza/" target="_blank" rel="noopener noreferrer">
+                    <Facebook className="h-4 w-4" />
+                    <span className="sr-only">Facebook</span>
                   </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    Community
+                </Button>
+                <Button variant="outline" size="icon" asChild>
+                  <a href="https://www.linkedin.com/in/francis-abainza-8813a0282/" target="_blank" rel="noopener noreferrer">
+                    <Linkedin className="h-4 w-4" />
+                    <span className="sr-only">LinkedIn</span>
                   </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    Status
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold">Company</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    About
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    Careers
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition-colors">
-                    Privacy
-                  </a>
-                </li>
-              </ul>
+                </Button>
+              </div>
             </div>
           </div>
+          
           <div className="border-t border-border mt-12 pt-8 text-center text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} LastMinuteLearner. All rights reserved.</p>
           </div>

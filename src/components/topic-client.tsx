@@ -56,9 +56,9 @@ export default function TopicClient({ topic }: { topic: Topic }) {
     <div className="min-h-screen bg-neutral-950 text-neutral-50 p-6 flex items-center justify-center">
       <Card className="w-full max-w-3xl bg-neutral-900 border-neutral-800">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:justify-between">
             <CardTitle className="text-xl flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-teal-400" />
+              <BookOpen className="min-w-5 min-h-5 text-teal-400" />
               {topic.title}
             </CardTitle>
             <Badge variant="secondary" className="bg-teal-700 text-teal-50">
