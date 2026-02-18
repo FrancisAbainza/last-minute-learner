@@ -20,7 +20,14 @@ const uploadSchema = z
     file: z
       .instanceof(File)
       .optional()
-      .refine((f) => !f || f.type === "application/pdf", "Only PDF files are allowed"),
+      .refine(
+        (f) => !f || [
+          "application/pdf",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        ].includes(f.type),
+        "Only PDF, DOCX, and PPTX files are allowed"
+      ),
   })
   .superRefine((data, ctx) => {
     if (!data.prompt?.trim() && !data.file) {
@@ -81,7 +88,7 @@ export function ChatUpload() {
     await insertReviewer(reviewerData);
 
     toast.success(
-      file ? "PDF uploaded successfully! Study reviewer has been generated." : "Study reviewer has been generated."
+      file ? "File uploaded successfully! Study reviewer has been generated." : "Study reviewer has been generated."
     )
     form.reset()
     if (fileInputRef.current) fileInputRef.current.value = ""
@@ -123,7 +130,7 @@ export function ChatUpload() {
             <div className="flex-1">
               <Input
                 {...form.register("prompt")}
-                placeholder={selectedFile ? selectedFile.name : "Type a topic to generate... or upload a PDF"}
+                placeholder={selectedFile ? selectedFile.name : "Type a topic to generate... or upload a PDF/DOCX/PPTX"}
                 disabled={isUploading}
                 className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground"
               />
@@ -133,7 +140,7 @@ export function ChatUpload() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf"
+                accept=".pdf,.docx,.pptx"
                 onChange={handleFileSelect}
                 disabled={isUploading}
                 className="hidden"
