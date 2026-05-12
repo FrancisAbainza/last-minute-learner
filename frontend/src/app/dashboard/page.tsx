@@ -31,6 +31,7 @@ export default function DashboardPage() {
         `Reviewer generated from your ${file ? "file" : "prompt"}!`
       );
     } catch (error) {
+      console.error(error);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);

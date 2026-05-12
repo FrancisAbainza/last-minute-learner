@@ -26,7 +26,9 @@ export const uploadSchema = z
   .object({
     prompt: z.string().optional(),
     file: z
-      .instanceof(File)
+      .custom<File>((value) => value instanceof File, {
+        message: "Invalid file",
+      })
       .optional()
       .refine(
         (f) => !f || ACCEPTED_MIME_TYPES.includes(f.type),
