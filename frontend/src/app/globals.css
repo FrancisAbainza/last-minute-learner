@@ -109,7 +109,7 @@
    Primary shifts to a lighter blue so it pops on dark surface.
 ──────────────────────────────────────────────────────────── */
 .dark {
-  --background: oklch(0.15 0.022 264);
+  --background: oklch(15% 0.02082 264.359);
   --foreground: oklch(0.962 0.018 96);
 
   --card: oklch(0.21 0.025 264);
