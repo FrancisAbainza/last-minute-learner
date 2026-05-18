@@ -1,19 +1,12 @@
 "use client";
-import { ChatUpload, UploadFormData } from "@/components/chat-upload"
+import { ChatUpload, PromptFormData } from "@/components/chat-upload"
 import { extractText } from "@/lib/text-extractor";
-import { generateReviewer } from "@/services/ai-sdk";
-import { useState } from "react"
+import { generateReviewer } from "@/services/ai/reviewer-generator";
 import { toast } from "sonner"
 
 export default function DashboardPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleSubmit = async ({ file, prompt }: UploadFormData) => {
-    setIsSubmitting(true);
-
+  const handleSubmit = async ({ file, prompt }: PromptFormData) => {
     try {
-      await new Promise((r) => setTimeout(r, 1500));
-
       const extractedText = file
         ? await extractText(file)
         : "";
@@ -33,8 +26,6 @@ export default function DashboardPage() {
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -48,7 +39,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Chat Upload Component */}
-        <ChatUpload onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+        <ChatUpload onSubmit={handleSubmit} />
 
       </div>
     </div>
