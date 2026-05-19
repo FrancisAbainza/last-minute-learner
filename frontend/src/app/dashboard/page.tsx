@@ -1,7 +1,7 @@
 "use client";
 import { ChatUpload, PromptFormData } from "@/components/chat-upload"
 import { extractText } from "@/lib/text-extractor";
-import { generateReviewer } from "@/services/ai/reviewer-generator";
+import { resolvePrompt } from "@/services/ai/prompt-resolver";
 import { toast } from "sonner"
 
 export default function DashboardPage() {
@@ -11,14 +11,11 @@ export default function DashboardPage() {
         ? await extractText(file)
         : "";
 
-      const generatedReviewer = await generateReviewer(
-        [prompt, extractedText]
-          .filter(Boolean)
-          .join(", ")
-      );
+      const fullPrompt = [prompt, extractedText]
+        .filter(Boolean)
+        .join(": \n")
 
-      // Save generated reviewer to database using flask
-      console.log(generatedReviewer);
+      await resolvePrompt(fullPrompt);
 
       toast.success(
         `Reviewer generated from your ${file ? "file" : "prompt"}!`
