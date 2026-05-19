@@ -1,10 +1,12 @@
 "use client";
 import { ChatUpload, PromptFormData } from "@/components/chat-upload"
 import { extractText } from "@/lib/text-extractor";
-import { resolvePrompt } from "@/services/ai/prompt-resolver";
+import { useResolvePromptMutation } from "@/mutations/reviewers";
 import { toast } from "sonner"
 
 export default function DashboardPage() {
+  const { mutateAsync } = useResolvePromptMutation();
+
   const handleSubmit = async ({ file, prompt }: PromptFormData) => {
     try {
       const extractedText = file
@@ -15,7 +17,7 @@ export default function DashboardPage() {
         .filter(Boolean)
         .join(": \n")
 
-      await resolvePrompt(fullPrompt);
+      await mutateAsync(fullPrompt);
 
       toast.success(
         `Reviewer generated from your ${file ? "file" : "prompt"}!`
