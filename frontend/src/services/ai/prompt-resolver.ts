@@ -4,7 +4,17 @@
 import { gateway, generateText, tool } from "ai";
 import { z } from "zod";
 import { generateReviewer } from "./reviewer-generator";
-const model = gateway("openai/gpt-4o-mini")
+
+const model = gateway("openai/gpt-4o-mini");
+
+/** -------------------------
+ * TOOLS
+ * ------------------------- */
+
+type ToolResponse = {
+  success: boolean;
+  message: string;
+};
 
 const createReviewerTool = tool({
   description: "Create a new reviewer",
@@ -13,7 +23,7 @@ const createReviewerTool = tool({
     prompt: z.string(),
   }),
 
-  execute: async ({ prompt }) => {
+  execute: async ({ prompt }): Promise<ToolResponse> => {
     // Generate reviewer from prompt
     const reviewer = await generateReviewer(prompt);
 
@@ -22,6 +32,7 @@ const createReviewerTool = tool({
 
     return {
       success: true,
+      message: "A reviewer has been created successfully.",
     };
   },
 });
@@ -33,50 +44,70 @@ const deleteReviewerTool = tool({
     reviewerId: z.string(),
   }),
 
-  execute: async ({ reviewerId }) => {
+  execute: async ({ reviewerId }): Promise<ToolResponse> => {
     console.log("Deleting reviewer:", reviewerId);
 
     return {
       success: true,
+      message: "A reviewer has been deleted successfully.",
     };
   },
 });
 
+/** -------------------------
+ * MAIN RESOLVER
+ * ------------------------- */
+
 export async function resolvePrompt(prompt: string) {
-  // Fetch all reviewers
-  // const reviewers = await getReviewers();
+  const systemMessage = `
+You are a helpful assistant with access to reviewer management tools.
 
-  const systemMessage = `You are a helpful assistant with access to reviewer management tools.
-  When users ask you to create, make, or add reviewers, use the createReviewer tool.
-  When users ask you to delete, remove, or destroy reviewers, use the deleteReviewer tool.
-  Always use the appropriate tools when the user's request involves reviewer operations.
-  
-  Available tools:
-  - createReviewer: Creates a new reviewer from prompt
-  - deleteReviewer: Deletes a reviewer by its ID number
+When users ask you to create, make, or add reviewers, use the createReviewer tool.
+When users ask you to delete, remove, or destroy reviewers, use the deleteReviewer tool.
 
-  When creating a reviewer,
-  - ALWAYS pass the full user request inside the "prompt" field.
-  
-  When deleting a reviewer:
-  - match the best reviewer by its field.
-  - use deleteReviewer tool with the correct reviewerId.
-  `;
+Always use tools for reviewer operations.
+
+Available tools:
+- createReviewer: Creates a new reviewer from prompt
+- deleteReviewer: Deletes a reviewer by its ID number
+
+Rules:
+- When creating, pass full user request into "prompt"
+- When deleting, extract correct reviewerId and use deleteReviewer
+`;
 
   const result = await generateText({
-    model: model,
+    model,
     system: systemMessage,
     prompt,
     tools: {
       createReviewer: createReviewerTool,
       deleteReviewer: deleteReviewerTool,
     },
-    allowSystemInMessages: true,
+    allowSystemInMessages: false,
   });
 
+  /** -------------------------
+   * TOOL RESULT HANDLING
+   * ------------------------- */
+
+  const firstToolResult = result.toolResults?.[0];
+
+  if (firstToolResult) {
+    const output = firstToolResult.output as Partial<ToolResponse> | undefined;
+
+    return {
+      success: true,
+      message: output?.message ?? "Action completed.",
+    };
+  }
+
+  /** -------------------------
+   * NO TOOL CALLED
+   * ------------------------- */
+
   return {
-    text: result.text,
-    toolCalls: result.toolCalls,
-    toolResults: result.toolResults,
+    success: false,
+    message: "I couldn't determine the correct action. Please specify whether you want to create, delete, or access a reviewer.",
   };
 }

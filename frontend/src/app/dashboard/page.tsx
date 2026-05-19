@@ -1,33 +1,6 @@
-"use client";
-import { ChatUpload, PromptFormData } from "@/components/chat-upload"
-import { extractText } from "@/lib/text-extractor";
-import { useResolvePromptMutation } from "@/mutations/reviewers";
-import { toast } from "sonner"
+import { ChatUpload } from "@/components/chat-upload"
 
 export default function DashboardPage() {
-  const { mutateAsync } = useResolvePromptMutation();
-
-  const handleSubmit = async ({ file, prompt }: PromptFormData) => {
-    try {
-      const extractedText = file
-        ? await extractText(file)
-        : "";
-
-      const fullPrompt = [prompt, extractedText]
-        .filter(Boolean)
-        .join(": \n")
-
-      await mutateAsync(fullPrompt);
-
-      toast.success(
-        `Reviewer generated from your ${file ? "file" : "prompt"}!`
-      );
-    } catch (error) {
-      console.error(error);
-      toast.error("Something went wrong. Please try again.");
-    }
-  };
-
   return (
     <div className="bg-background">
       <div className="container mx-auto px-4 py-8 lg:px-8">
@@ -38,7 +11,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Chat Upload Component */}
-        <ChatUpload onSubmit={handleSubmit} />
+        <ChatUpload />
 
       </div>
     </div>

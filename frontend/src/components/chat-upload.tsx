@@ -9,6 +9,9 @@ import { Plus, ArrowUp, X, FileText, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldError, FieldGroup } from "@/components/ui/field"
+import { extractText } from "@/lib/text-extractor"
+import { useResolvePromptMutation } from "@/mutations/reviewers"
+import { toast } from "sonner"
 
 const ACCEPTED_MIME_TYPES = [
   "application/pdf",
@@ -40,16 +43,15 @@ export const uploadSchema = z
 export type PromptFormData = z.infer<typeof uploadSchema>
 
 interface ChatUploadProps {
-  onSubmit: (data: PromptFormData) => Promise<void>
   placeholder?: string
 }
 
 export function ChatUpload({
-  onSubmit,
-  placeholder = "Type a topic to generate… or upload a PDF/DOCX/PPTX",
+  placeholder = "Type here what you want to do",
 }: ChatUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const clearFileInput = () => { if (fileInputRef.current) fileInputRef.current.value = "" }
+  const { mutateAsync } = useResolvePromptMutation();
 
   const {
     register,
@@ -57,6 +59,7 @@ export function ChatUpload({
     watch,
     setValue,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<PromptFormData>({
     resolver: zodResolver(uploadSchema),
@@ -75,10 +78,32 @@ export function ChatUpload({
     clearFileInput()
   }
 
-  const handleFormSubmit = async (data: PromptFormData) => {
-    await onSubmit(data)
-    reset()
-    clearFileInput()
+  const handleFormSubmit = async ({ file, prompt }: PromptFormData) => {
+    try {
+      const fullPrompt = [
+        prompt,
+        file ? await extractText(file) : "",
+      ]
+        .filter(Boolean)
+        .join(": \n");
+
+      const { success, message } = await mutateAsync(fullPrompt);
+
+      if (!success) {
+        setError("prompt", {
+          type: "manual",
+          message,
+        });
+        return;
+      }
+
+      toast.success(message);
+      reset();
+      clearFileInput();
+    } catch (error) {
+      console.error(error);
+      toast.error("Something went wrong. Please try again.");
+    }
   }
 
   return (
@@ -128,7 +153,7 @@ export function ChatUpload({
                 }
               </Button>
             </div>
-            <FieldError errors={[errors.prompt, errors.file]} />
+            <FieldError errors={[errors.prompt]} />
           </Field>
 
           {selectedFile && (
