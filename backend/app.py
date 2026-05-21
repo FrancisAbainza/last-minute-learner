@@ -40,7 +40,6 @@ class Reviewer(db.Model):
 
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
-
 # =========================
 # CREATE
 # POST /reviewers
@@ -68,12 +67,12 @@ def create_reviewer():
     }), 201
 
 # =========================
-# READ ALL
-# GET /reviewers
+# READ BY USER ID
+# GET /reviewers/user/<user_id>
 # =========================
-@app.route("/reviewers", methods=["GET"])
-def get_reviewers():
-    reviewers = Reviewer.query.all()
+@app.route("/reviewers/user/<string:user_id>", methods=["GET"])
+def get_user_reviewers(user_id):
+    reviewers = Reviewer.query.filter_by(user_id=user_id).all()
 
     return jsonify([
         {
@@ -89,7 +88,7 @@ def get_reviewers():
         }
         for r in reviewers
     ])
-
+    
 # =========================
 # READ ONE
 # GET /reviewers/<id>
