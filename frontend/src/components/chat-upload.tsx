@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldError, FieldGroup } from "@/components/ui/field"
 import { extractText } from "@/lib/text-extractor"
-import { useResolvePromptMutation } from "@/mutations/reviewers"
+import { useResolvePromptMutation } from "@/mutations/reviewer-mutation"
 import { toast } from "sonner"
 
 const ACCEPTED_MIME_TYPES = [
@@ -19,7 +19,7 @@ const ACCEPTED_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ]
 
-export const uploadSchema = z
+export const promptSchema = z
   .object({
     prompt: z.string().optional(),
     file: z
@@ -40,7 +40,7 @@ export const uploadSchema = z
     }
   })
 
-export type PromptFormData = z.infer<typeof uploadSchema>
+export type PromptFormData = z.infer<typeof promptSchema>
 
 interface ChatUploadProps {
   placeholder?: string
@@ -62,7 +62,7 @@ export function ChatUpload({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<PromptFormData>({
-    resolver: zodResolver(uploadSchema),
+    resolver: zodResolver(promptSchema),
     defaultValues: { prompt: "", file: undefined },
   })
 
