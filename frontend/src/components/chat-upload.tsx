@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { useRef } from "react"
-import { useAuth } from "@clerk/nextjs"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -52,7 +51,6 @@ export function ChatUpload({
 }: ChatUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const clearFileInput = () => { if (fileInputRef.current) fileInputRef.current.value = "" }
-  const { getToken } = useAuth();
   const { mutateAsync } = useResolvePromptMutation();
 
   const {
@@ -82,12 +80,6 @@ export function ChatUpload({
 
   const handleFormSubmit = async ({ file, prompt }: PromptFormData) => {
     try {
-      const token = await getToken();
-      if (!token) {
-        setError("prompt", { type: "manual", message: "Session expired. Please refresh the page." });
-        return;
-      }
-
       const fullPrompt = [
         prompt,
         file ? await extractText(file) : "",
@@ -95,7 +87,7 @@ export function ChatUpload({
         .filter(Boolean)
         .join(": \n");
 
-      const { success, message } = await mutateAsync({ prompt: fullPrompt, token });
+      const { success, message } = await mutateAsync(fullPrompt);
 
       if (!success) {
         setError("prompt", {

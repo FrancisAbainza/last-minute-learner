@@ -1,11 +1,13 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { gateway, generateText, tool } from "ai";
 import { z } from "zod";
 import { generateReviewer } from "./reviewer-generator";
 
 const model = gateway("openai/gpt-4o-mini");
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
+const SERVICE_SECRET = process.env.INTERNAL_SERVICE_SECRET ?? "";
 
 /** -------------------------
  * TYPES
@@ -39,18 +41,22 @@ Rules:
 
 /** -------------------------
  * MAIN RESOLVER
- * token is obtained client-side (useAuth → getToken) and passed in so
- * it is always fresh — server-side auth() cannot refresh tokens mid-action.
+ * Clerk verifies the user here (server-side, instant).
+ * Flask trusts this server via INTERNAL_SERVICE_SECRET — no short-lived
+ * JWT is forwarded, so long AI operations never cause token expiry.
  * ------------------------- */
 
-export async function resolvePrompt({ prompt, token }: { prompt: string; token: string }) {
-  if (!token) {
+export async function resolvePrompt(prompt: string) {
+  const { userId } = await auth();
+
+  if (!userId) {
     return { success: false, message: "Unauthorized" };
   }
 
-  const authHeaders: Record<string, string> = {
+  const serviceHeaders: Record<string, string> = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
+    "X-User-Id": userId,
+    "X-Service-Secret": SERVICE_SECRET,
   };
 
   /** -------------------------
@@ -68,7 +74,7 @@ export async function resolvePrompt({ prompt, token }: { prompt: string; token: 
 
         const res = await fetch(`${BACKEND_URL}/reviewers`, {
           method: "POST",
-          headers: authHeaders,
+          headers: serviceHeaders,
           body: JSON.stringify(reviewer),
         });
 
@@ -94,7 +100,7 @@ export async function resolvePrompt({ prompt, token }: { prompt: string; token: 
       try {
         const res = await fetch(`${BACKEND_URL}/reviewers/${reviewerId}`, {
           method: "DELETE",
-          headers: authHeaders,
+          headers: serviceHeaders,
         });
 
         if (!res.ok) {

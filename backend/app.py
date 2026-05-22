@@ -1,9 +1,6 @@
 import os
 import uuid
 import functools
-from datetime import timedelta
-import jwt
-from jwt import PyJWKClient
 from flask import Flask, request, jsonify, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -27,31 +24,20 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 db = SQLAlchemy(app)
 
 # =========================
-# CLERK JWT AUTH
+# SERVER-TO-SERVER AUTH
+# Clerk verifies the user in Next.js; Flask trusts Next.js via a shared secret.
+# This avoids short-lived Clerk JWT expiry issues on long-running AI operations.
 # =========================
-_jwks_client = PyJWKClient(os.getenv("CLERK_JWKS_URL"))
+_SERVICE_SECRET = os.getenv("INTERNAL_SERVICE_SECRET")
 
 def require_auth(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        auth_header = request.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
+        secret  = request.headers.get("X-Service-Secret", "")
+        user_id = request.headers.get("X-User-Id", "")
+        if not secret or secret != _SERVICE_SECRET or not user_id:
             return jsonify({"message": "Unauthorized"}), 401
-        token = auth_header[7:]
-        try:
-            signing_key = _jwks_client.get_signing_key_from_jwt(token)
-            payload = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=["RS256"],
-                leeway=timedelta(seconds=10),
-                options={"verify_aud": False},
-            )
-            g.user_id = payload["sub"]
-        except jwt.ExpiredSignatureError:
-            return jsonify({"message": "Token has expired"}), 401
-        except Exception:
-            return jsonify({"message": "Invalid or expired token"}), 401
+        g.user_id = user_id
         return f(*args, **kwargs)
     return wrapper
 
