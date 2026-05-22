@@ -2,11 +2,13 @@ import os
 import uuid
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 
 # =========================
 # DATABASE (Neon)
@@ -22,34 +24,53 @@ db = SQLAlchemy(app)
 
 
 # =========================
-# MODEL (snake_case)
+# MODEL
 # =========================
 class Reviewer(db.Model):
     __tablename__ = "reviewers"
 
-    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = db.Column(db.String(255), nullable=False)
+    id          = db.Column(db.String,       primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id     = db.Column(db.String(255),  nullable=False)
+    title       = db.Column(db.Text,         nullable=False)
+    description = db.Column(db.Text,         nullable=False)
+    field       = db.Column(db.String(255),  nullable=False)
+    reviewer    = db.Column(db.JSON,         nullable=False)
+    flashcards  = db.Column(db.JSON,         nullable=False)
+    quiz        = db.Column(db.JSON,         nullable=False)
+    created_at  = db.Column(db.DateTime,     server_default=db.func.now())
 
-    title = db.Column(db.Text, nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    field = db.Column(db.String(255), nullable=False)
+    def to_dict(self):
+        return {
+            "id":          self.id,
+            "user_id":     self.user_id,
+            "title":       self.title,
+            "description": self.description,
+            "field":       self.field,
+            "reviewer":    self.reviewer,
+            "flashcards":  self.flashcards,
+            "quiz":        self.quiz,
+            "created_at":  self.created_at.isoformat() if self.created_at else None,
+        }
 
-    reviewer = db.Column(db.JSON, nullable=False)
-    flashcards = db.Column(db.JSON, nullable=False)
-    quiz = db.Column(db.JSON, nullable=False)
-
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
 
 # =========================
-# CREATE
-# POST /reviewers
+# CREATE  —  POST /reviewers
 # =========================
+REQUIRED_FIELDS = ["title", "description", "field", "reviewer", "flashcards", "quiz"]
+DUMMY_USER_ID = "dummy-user"  # TODO: replace with real auth once ready
+
 @app.route("/reviewers", methods=["POST"])
 def create_reviewer():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"message": "Invalid or missing JSON body"}), 400
 
-    new_reviewer = Reviewer(
-        user_id=data["user_id"],
+    missing = [f for f in REQUIRED_FIELDS if f not in data]
+    if missing:
+        return jsonify({"message": f"Missing fields: {missing}"}), 400
+
+    entry = Reviewer(
+        user_id=data.get("user_id") or DUMMY_USER_ID,
         title=data["title"],
         description=data["description"],
         field=data["field"],
@@ -57,82 +78,51 @@ def create_reviewer():
         flashcards=data["flashcards"],
         quiz=data["quiz"],
     )
-
-    db.session.add(new_reviewer)
+    db.session.add(entry)
     db.session.commit()
 
-    return jsonify({
-        "message": "Created",
-        "id": new_reviewer.id
-    }), 201
+    return jsonify({"message": "Created", "id": entry.id}), 201
+
 
 # =========================
-# READ BY USER ID
-# GET /reviewers/user/<user_id>
+# READ BY USER  —  GET /reviewers/user/<user_id>
 # =========================
 @app.route("/reviewers/user/<string:user_id>", methods=["GET"])
 def get_user_reviewers(user_id):
     reviewers = Reviewer.query.filter_by(user_id=user_id).all()
+    return jsonify([r.to_dict() for r in reviewers])
 
-    return jsonify([
-        {
-            "id": r.id,
-            "user_id": r.user_id,
-            "title": r.title,
-            "description": r.description,
-            "field": r.field,
-            "reviewer": r.reviewer,
-            "flashcards": r.flashcards,
-            "quiz": r.quiz,
-            "created_at": r.created_at,
-        }
-        for r in reviewers
-    ])
-    
+
 # =========================
-# READ ONE
-# GET /reviewers/<id>
+# READ ONE  —  GET /reviewers/<id>
 # =========================
 @app.route("/reviewers/<string:id>", methods=["GET"])
 def get_reviewer(id):
-    reviewer = Reviewer.query.get(id)
-
+    reviewer = db.session.get(Reviewer, id)
     if not reviewer:
         return jsonify({"message": "Not found"}), 404
+    return jsonify(reviewer.to_dict())
 
-    return jsonify({
-        "id": reviewer.id,
-        "user_id": reviewer.user_id,
-        "title": reviewer.title,
-        "description": reviewer.description,
-        "field": reviewer.field,
-        "reviewer": reviewer.reviewer,
-        "flashcards": reviewer.flashcards,
-        "quiz": reviewer.quiz,
-        "created_at": reviewer.created_at,
-    })
 
 # =========================
-# DELETE
-# DELETE /reviewers/<id>
+# DELETE  —  DELETE /reviewers/<id>
 # =========================
 @app.route("/reviewers/<string:id>", methods=["DELETE"])
 def delete_reviewer(id):
-    reviewer = Reviewer.query.get(id)
-
+    reviewer = db.session.get(Reviewer, id)
     if not reviewer:
         return jsonify({"message": "Not found"}), 404
 
     db.session.delete(reviewer)
     db.session.commit()
-
     return jsonify({"message": "Deleted"})
-    
-# =========================
-# RUN APP
-# =========================
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
 
+
+# =========================
+# STARTUP
+# =========================
+with app.app_context():
+    db.create_all()
+
+if __name__ == "__main__":
     app.run(debug=True)
