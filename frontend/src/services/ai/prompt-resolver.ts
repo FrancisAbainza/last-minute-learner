@@ -39,11 +39,22 @@ Rules:
 
 /** -------------------------
  * MAIN RESOLVER
+ * token is obtained client-side (useAuth → getToken) and passed in so
+ * it is always fresh — server-side auth() cannot refresh tokens mid-action.
  * ------------------------- */
 
-export async function resolvePrompt(prompt: string) {
+export async function resolvePrompt({ prompt, token }: { prompt: string; token: string }) {
+  if (!token) {
+    return { success: false, message: "Unauthorized" };
+  }
+
+  const authHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
   /** -------------------------
-   * TOOLS  (defined inside to capture userId via closure)
+   * TOOLS
    * ------------------------- */
 
   const createReviewerTool = tool({
@@ -57,7 +68,7 @@ export async function resolvePrompt(prompt: string) {
 
         const res = await fetch(`${BACKEND_URL}/reviewers`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify(reviewer),
         });
 
@@ -83,6 +94,7 @@ export async function resolvePrompt(prompt: string) {
       try {
         const res = await fetch(`${BACKEND_URL}/reviewers/${reviewerId}`, {
           method: "DELETE",
+          headers: authHeaders,
         });
 
         if (!res.ok) {

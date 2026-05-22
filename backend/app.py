@@ -1,6 +1,10 @@
 import os
 import uuid
-from flask import Flask, request, jsonify
+import functools
+from datetime import timedelta
+import jwt
+from jwt import PyJWKClient
+from flask import Flask, request, jsonify, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -21,6 +25,35 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 }
 
 db = SQLAlchemy(app)
+
+# =========================
+# CLERK JWT AUTH
+# =========================
+_jwks_client = PyJWKClient(os.getenv("CLERK_JWKS_URL"))
+
+def require_auth(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"message": "Unauthorized"}), 401
+        token = auth_header[7:]
+        try:
+            signing_key = _jwks_client.get_signing_key_from_jwt(token)
+            payload = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256"],
+                leeway=timedelta(seconds=10),
+                options={"verify_aud": False},
+            )
+            g.user_id = payload["sub"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"message": "Token has expired"}), 401
+        except Exception:
+            return jsonify({"message": "Invalid or expired token"}), 401
+        return f(*args, **kwargs)
+    return wrapper
 
 
 # =========================
@@ -54,12 +87,16 @@ class Reviewer(db.Model):
 
 
 # =========================
-# CREATE  —  POST /reviewers
+# REQUIRED FIELDS
 # =========================
 REQUIRED_FIELDS = ["title", "description", "field", "reviewer", "flashcards", "quiz"]
-DUMMY_USER_ID = "dummy-user"  # TODO: replace with real auth once ready
 
+
+# =========================
+# CREATE  —  POST /reviewers
+# =========================
 @app.route("/reviewers", methods=["POST"])
+@require_auth
 def create_reviewer():
     data = request.get_json(silent=True)
     if not data:
@@ -70,7 +107,7 @@ def create_reviewer():
         return jsonify({"message": f"Missing fields: {missing}"}), 400
 
     entry = Reviewer(
-        user_id=data.get("user_id") or DUMMY_USER_ID,
+        user_id=g.user_id,
         title=data["title"],
         description=data["description"],
         field=data["field"],
@@ -85,11 +122,12 @@ def create_reviewer():
 
 
 # =========================
-# READ BY USER  —  GET /reviewers/user/<user_id>
+# READ BY USER  —  GET /reviewers
 # =========================
-@app.route("/reviewers/user/<string:user_id>", methods=["GET"])
-def get_user_reviewers(user_id):
-    reviewers = Reviewer.query.filter_by(user_id=user_id).all()
+@app.route("/reviewers", methods=["GET"])
+@require_auth
+def get_user_reviewers():
+    reviewers = Reviewer.query.filter_by(user_id=g.user_id).all()
     return jsonify([r.to_dict() for r in reviewers])
 
 
@@ -97,10 +135,13 @@ def get_user_reviewers(user_id):
 # READ ONE  —  GET /reviewers/<id>
 # =========================
 @app.route("/reviewers/<string:id>", methods=["GET"])
+@require_auth
 def get_reviewer(id):
     reviewer = db.session.get(Reviewer, id)
     if not reviewer:
         return jsonify({"message": "Not found"}), 404
+    if reviewer.user_id != g.user_id:
+        return jsonify({"message": "Forbidden"}), 403
     return jsonify(reviewer.to_dict())
 
 
@@ -108,10 +149,13 @@ def get_reviewer(id):
 # DELETE  —  DELETE /reviewers/<id>
 # =========================
 @app.route("/reviewers/<string:id>", methods=["DELETE"])
+@require_auth
 def delete_reviewer(id):
     reviewer = db.session.get(Reviewer, id)
     if not reviewer:
         return jsonify({"message": "Not found"}), 404
+    if reviewer.user_id != g.user_id:
+        return jsonify({"message": "Forbidden"}), 403
 
     db.session.delete(reviewer)
     db.session.commit()
