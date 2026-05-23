@@ -1,6 +1,6 @@
 import { ChatUpload } from "@/components/chat-upload"
 
-export default function DashboardPage() {
+export default function ReviewersPage() {
   return (
     <div className="bg-background">
       <div className="container mx-auto px-4 py-8 lg:px-8">

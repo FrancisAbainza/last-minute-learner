@@ -85,7 +85,7 @@ export function ChatUpload({
         file ? await extractText(file) : "",
       ]
         .filter(Boolean)
-        .join(": \n");
+        .join("\n\n");
 
       const { success, message } = await mutateAsync(fullPrompt);
 
