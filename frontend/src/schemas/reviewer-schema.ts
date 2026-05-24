@@ -30,3 +30,9 @@ export const reviewerSchema = z.object({
 });
 
 export type ReviewerOutput = z.infer<typeof reviewerSchema>;
+
+export type ReviewerData = ReviewerOutput & {
+  id: string;
+  user_id: string;
+  created_at: string;
+};

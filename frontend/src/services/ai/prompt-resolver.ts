@@ -5,6 +5,7 @@ import { gateway, generateText, tool } from "ai";
 import { z } from "zod";
 import { generateReviewer } from "./reviewer-generator";
 import { redirect } from "next/navigation";
+import { ReviewerData } from "@/schemas/reviewer-schema";
 
 const model = gateway("openai/gpt-4o-mini");
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
@@ -14,13 +15,6 @@ type ToolResponse = {
   success: boolean;
   message: string;
   redirectTo?: string;
-};
-
-type Reviewer = {
-  id: string;
-  title: string;
-  description: string;
-  field: string;
 };
 
 const SYSTEM_MESSAGE = `
@@ -55,12 +49,12 @@ export async function resolvePrompt(prompt: string) {
 
   // Fetched once and reused across tools that need it
   const getReviewers = (() => {
-    let cache: Reviewer[] | null = null;
+    let cache: ReviewerData[] | null = null;
     return async () => {
       if (cache) return cache;
       const res = await fetch(`${BACKEND_URL}/reviewers`, { headers: serviceHeaders });
       if (!res.ok) return [];
-      cache = (await res.json()) as Reviewer[];
+      cache = (await res.json()) as ReviewerData[];
       return cache;
     };
   })();

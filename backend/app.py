@@ -68,7 +68,7 @@ class Reviewer(db.Model):
             "reviewer":    self.reviewer,
             "flashcards":  self.flashcards,
             "quiz":        self.quiz,
-            "created_at":  self.created_at.isoformat() if self.created_at else None,
+            "created_at":  self.created_at.isoformat(),
         }
 
 
@@ -113,7 +113,7 @@ def create_reviewer():
 @app.route("/reviewers", methods=["GET"])
 @require_auth
 def get_user_reviewers():
-    reviewers = Reviewer.query.filter_by(user_id=g.user_id).all()
+    reviewers = Reviewer.query.filter_by(user_id=g.user_id).order_by(Reviewer.created_at.desc()).all()
     return jsonify([r.to_dict() for r in reviewers])
 
 

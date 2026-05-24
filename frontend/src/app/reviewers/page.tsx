@@ -12,6 +12,20 @@ export default function ReviewersPage() {
     queryFn: fetchReviewers,
   })
 
+  if (isLoading) (
+    <div className="flex items-center justify-center py-24 gap-2 text-muted-foreground">
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span className="text-sm">Loading reviewers…</span>
+    </div>
+  )
+
+  if (error) (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <p className="text-sm text-destructive font-medium">Failed to load reviewers.</p>
+      <p className="text-xs text-muted-foreground mt-1">Please try refreshing the page.</p>
+    </div>
+  )
+
   return (
     <div className="bg-background min-h-screen">
       <div className="container mx-auto px-4 py-8 lg:px-8 space-y-10">
@@ -24,22 +38,7 @@ export default function ReviewersPage() {
         {/* Chat Upload Component */}
         <ChatUpload />
 
-        {/* Reviewers List */}
-        <section>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-24 gap-2 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="text-sm">Loading reviewers…</span>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <p className="text-sm text-destructive font-medium">Failed to load reviewers.</p>
-              <p className="text-xs text-muted-foreground mt-1">Please try refreshing the page.</p>
-            </div>
-          ) : (
-            <ReviewersList reviewers={data ?? []} />
-          )}
-        </section>
+        <ReviewersList reviewers={data ?? []} />
       </div>
     </div>
   )
