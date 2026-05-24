@@ -4,6 +4,7 @@ import { ReviewerData } from "@/schemas/reviewer-schema";
 import { useQuery } from "@tanstack/react-query";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
+import { ReviewerCard } from "./reviewer/reviewer-card";
 
 export default function Reviewer() {
   const { reviewerId } = useParams<{ reviewerId: string }>();
@@ -13,8 +14,6 @@ export default function Reviewer() {
     queryFn: (): Promise<ReviewerData> => fetch(`/api/reviewers/${reviewerId}`).then(r => r.json()),
     enabled: !!reviewerId,
   })
-
-  console.log(reviewer)
 
   if (!reviewerId || isPending) return (
     <div className="flex items-center justify-center py-24 gap-2 text-muted-foreground">
@@ -52,6 +51,6 @@ export default function Reviewer() {
   }
 
   return (
-    <></>
+    <ReviewerCard data={reviewer} />
   )
 }

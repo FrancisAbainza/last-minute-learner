@@ -1,38 +1,13 @@
 "use client"
 
 import { Calendar, BookOpen, GraduationCap, ArrowRight, ScrollText, FlaskConical, Loader2 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { ReviewerData } from "@/schemas/reviewer-schema"
-
-const FIELD_PALETTES = [
-  { bg: "bg-emerald-950/60", text: "text-emerald-400", dot: "bg-emerald-400" },
-  { bg: "bg-amber-950/60", text: "text-amber-400", dot: "bg-amber-400" },
-  { bg: "bg-blue-950/60", text: "text-blue-400", dot: "bg-blue-400" },
-  { bg: "bg-violet-950/60", text: "text-violet-400", dot: "bg-violet-400" },
-  { bg: "bg-rose-950/60", text: "text-rose-400", dot: "bg-rose-400" },
-  { bg: "bg-cyan-950/60", text: "text-cyan-400", dot: "bg-cyan-400" },
-  { bg: "bg-orange-950/60", text: "text-orange-400", dot: "bg-orange-400" },
-  { bg: "bg-pink-950/60", text: "text-pink-400", dot: "bg-pink-400" },
-  { bg: "bg-teal-950/60", text: "text-teal-400", dot: "bg-teal-400" },
-  { bg: "bg-indigo-950/60", text: "text-indigo-400", dot: "bg-indigo-400" },
-]
-
-function hashField(field: string): number {
-  let hash = 0
-  for (let i = 0; i < field.length; i++) {
-    hash = (hash * 31 + field.charCodeAt(i)) >>> 0
-  }
-  return hash
-}
-
-function getFieldStyle(field: string) {
-  return FIELD_PALETTES[hashField(field) % FIELD_PALETTES.length]
-}
+import { FieldBadge } from "@/components/ui/field-badge"
 
 export default function ReviewersList() {
   const { data: reviewers, isLoading, error } = useQuery({
@@ -98,19 +73,12 @@ export default function ReviewersList() {
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {reviewers.map((reviewer) => {
-          const fieldStyle = getFieldStyle(reviewer.field)
           return (
             <Link key={reviewer.id} href={`/reviewers/${reviewer.id}`} className="group block">
               <Card className="relative flex flex-col h-full overflow-hidden border border-border/50 bg-card hover:border-primary hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 transition-all duration-200">
                 <CardHeader className=" px-5">
                   {/* Field badge */}
-                  <Badge
-                    variant="outline"
-                    className={`w-fit gap-1.5 border-0 text-[11px] font-semibold tracking-wide ${fieldStyle.bg} ${fieldStyle.text}`}
-                  >
-                    <span className={`h-1.5 w-1.5 rounded-full ${fieldStyle.dot}`} />
-                    {reviewer.field}
-                  </Badge>
+                  <FieldBadge field={reviewer.field} />
 
                   {/* Title & description */}
                   <div className="space-y-1.5 pt-1">
