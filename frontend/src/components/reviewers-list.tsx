@@ -29,7 +29,7 @@ export default function ReviewersList() {
     </div>
   )
 
-  if (!reviewers) {
+  if (!reviewers || reviewers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-32 text-center gap-4">
         <div className="relative">
@@ -43,7 +43,7 @@ export default function ReviewersList() {
             No reviewers yet
           </h2>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            Prompt or upload a document to generate your first AI-powered study reviewer.
+            Click on the AI assistant button at the bottom right side of the screen to get started.
           </p>
         </div>
       </div>

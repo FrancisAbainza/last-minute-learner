@@ -73,7 +73,7 @@ export function ReviewerCard({ data }: ReviewerCardProps) {
       <Separator />
 
       {/* ── Tabs ── */}
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue="overview" className="w-full mb-20">
         <TabsList className="w-full h-auto flex flex-wrap gap-1 bg-muted p-1 rounded-lg mb-4">
           <TabsTrigger
             value="overview"
