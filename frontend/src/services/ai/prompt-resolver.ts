@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { ReviewerData } from "@/schemas/reviewer-schema";
 
 const model = gateway("openai/gpt-4o-mini");
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5000";
+const BACKEND_URL = process.env.FLASK_API_URL ?? "http://localhost:5000";
 const SERVICE_SECRET = process.env.INTERNAL_SERVICE_SECRET ?? "";
 
 type ToolResponse = {
