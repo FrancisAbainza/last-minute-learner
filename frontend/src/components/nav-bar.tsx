@@ -24,15 +24,15 @@ export function NavBar() {
               <span className="ml-2 text-xl font-bold text-foreground">LastMinuteLearner</span>
             </div>
           </Link>
-          <div className="hidden items-center space-x-4 md:flex">
+          <div className="flex items-center space-x-4">
             <Show when="signed-out">
               <SignInButton mode="modal">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="hidden md:inline">
                   Sign In
                 </Button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <Button size="sm">
+                <Button size="sm" className="hidden md:inline">
                   Get Started
                 </Button>
               </SignUpButton>
