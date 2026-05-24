@@ -112,13 +112,13 @@ export async function resolvePrompt(prompt: string) {
     }),
   };
 
-  // Inject the reviewer list into the prompt so the model can resolve IDs directly
-  const reviewers = await getReviewers();
-  const reviewerContext = reviewers.length
-    ? `\n\nAvailable reviewers:\n${JSON.stringify(reviewers.map(({ id, title, description, field }) => ({ id, title, description, field })), null, 2)}`
-    : "\n\nNo reviewers exist yet.";
-
   try {
+    // Inject the reviewer list into the prompt so the model can resolve IDs directly
+    const reviewers = await getReviewers();
+    const reviewerContext = reviewers.length
+      ? `\n\nAvailable reviewers:\n${JSON.stringify(reviewers.map(({ id, title, description, field }) => ({ id, title, description, field })), null, 2)}`
+      : "\n\nNo reviewers exist yet.";
+
     const result = await generateText({
       model,
       system: SYSTEM_MESSAGE + reviewerContext,

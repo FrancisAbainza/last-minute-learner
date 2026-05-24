@@ -1,28 +1,25 @@
 "use client"
 
-import { Calendar, BookOpen, GraduationCap, ArrowRight, ScrollText, FlaskConical } from "lucide-react"
+import { Calendar, BookOpen, GraduationCap, ArrowRight, ScrollText, FlaskConical, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
+import { useQuery } from "@tanstack/react-query"
 import { ReviewerData } from "@/schemas/reviewer-schema"
-
-type Props = {
-  reviewers: ReviewerData[]
-}
 
 const FIELD_PALETTES = [
   { bg: "bg-emerald-950/60", text: "text-emerald-400", dot: "bg-emerald-400" },
-  { bg: "bg-amber-950/60",   text: "text-amber-400",   dot: "bg-amber-400"   },
-  { bg: "bg-blue-950/60",    text: "text-blue-400",    dot: "bg-blue-400"    },
-  { bg: "bg-violet-950/60",  text: "text-violet-400",  dot: "bg-violet-400"  },
-  { bg: "bg-rose-950/60",    text: "text-rose-400",    dot: "bg-rose-400"    },
-  { bg: "bg-cyan-950/60",    text: "text-cyan-400",    dot: "bg-cyan-400"    },
-  { bg: "bg-orange-950/60",  text: "text-orange-400",  dot: "bg-orange-400"  },
-  { bg: "bg-pink-950/60",    text: "text-pink-400",    dot: "bg-pink-400"    },
-  { bg: "bg-teal-950/60",    text: "text-teal-400",    dot: "bg-teal-400"    },
-  { bg: "bg-indigo-950/60",  text: "text-indigo-400",  dot: "bg-indigo-400"  },
+  { bg: "bg-amber-950/60", text: "text-amber-400", dot: "bg-amber-400" },
+  { bg: "bg-blue-950/60", text: "text-blue-400", dot: "bg-blue-400" },
+  { bg: "bg-violet-950/60", text: "text-violet-400", dot: "bg-violet-400" },
+  { bg: "bg-rose-950/60", text: "text-rose-400", dot: "bg-rose-400" },
+  { bg: "bg-cyan-950/60", text: "text-cyan-400", dot: "bg-cyan-400" },
+  { bg: "bg-orange-950/60", text: "text-orange-400", dot: "bg-orange-400" },
+  { bg: "bg-pink-950/60", text: "text-pink-400", dot: "bg-pink-400" },
+  { bg: "bg-teal-950/60", text: "text-teal-400", dot: "bg-teal-400" },
+  { bg: "bg-indigo-950/60", text: "text-indigo-400", dot: "bg-indigo-400" },
 ]
 
 function hashField(field: string): number {
@@ -37,8 +34,27 @@ function getFieldStyle(field: string) {
   return FIELD_PALETTES[hashField(field) % FIELD_PALETTES.length]
 }
 
-export default function ReviewersList({ reviewers }: Props) {
-  if (reviewers.length === 0) {
+export default function ReviewersList() {
+  const { data: reviewers, isLoading, error } = useQuery({
+    queryKey: ['reviewers'],
+    queryFn: (): Promise<ReviewerData[]> => fetch('/api/reviewers').then(r => r.json()),
+  })
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-24 gap-2 text-muted-foreground">
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span className="text-sm">Loading reviewers…</span>
+    </div>
+  )
+
+  if (error) return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <p className="text-sm text-destructive font-medium">Failed to load reviewers.</p>
+      <p className="text-xs text-muted-foreground mt-1">{error.message}</p>
+    </div>
+  )
+
+  if (!reviewers) {
     return (
       <div className="flex flex-col items-center justify-center py-32 text-center gap-4">
         <div className="relative">
@@ -52,7 +68,7 @@ export default function ReviewersList({ reviewers }: Props) {
             No reviewers yet
           </h2>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            Upload a document to generate your first AI-powered study reviewer.
+            Prompt or upload a document to generate your first AI-powered study reviewer.
           </p>
         </div>
       </div>

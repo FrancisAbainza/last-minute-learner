@@ -79,31 +79,26 @@ export function ChatUpload({
   }
 
   const handleFormSubmit = async ({ file, prompt }: PromptFormData) => {
-    try {
-      const fullPrompt = [
-        prompt,
-        file ? await extractText(file) : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n");
+    const fullPrompt = [
+      prompt,
+      file ? await extractText(file) : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
-      const { success, message } = await mutateAsync(fullPrompt);
+    const { success, message } = await mutateAsync(fullPrompt);
 
-      if (!success) {
-        setError("prompt", {
-          type: "manual",
-          message,
-        });
-        return;
-      }
-
-      toast.success(message);
-      reset();
-      clearFileInput();
-    } catch (error) {
-      console.error(error);
-      toast.error("Something went wrong. Please try again.");
+    if (!success) {
+      setError("prompt", {
+        type: "manual",
+        message,
+      });
+      return;
     }
+
+    toast.success(message);
+    reset();
+    clearFileInput();
   }
 
   return (

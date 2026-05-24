@@ -125,9 +125,9 @@ def get_user_reviewers():
 def get_reviewer(id):
     reviewer = db.session.get(Reviewer, id)
     if not reviewer:
-        return jsonify({"message": "Not found"}), 404
+        return jsonify({"message": "The reviewer you are looking for does not exist in the database."}), 404
     if reviewer.user_id != g.user_id:
-        return jsonify({"message": "Forbidden"}), 403
+        return jsonify({"message": "You are not authorized to access this reviewer."}), 403
     return jsonify(reviewer.to_dict())
 
 
@@ -139,9 +139,9 @@ def get_reviewer(id):
 def delete_reviewer(id):
     reviewer = db.session.get(Reviewer, id)
     if not reviewer:
-        return jsonify({"message": "Not found"}), 404
+        return jsonify({"message": "The reviewer you are looking for does not exist in the database."}), 404
     if reviewer.user_id != g.user_id:
-        return jsonify({"message": "Forbidden"}), 403
+        return jsonify({"message": "You are not authorized to delete this reviewer."}), 403
 
     db.session.delete(reviewer)
     db.session.commit()

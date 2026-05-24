@@ -1,10 +1,7 @@
-type ReviewerPageProp = {
-  params: Promise<{ reviewerId: string }>
-}
+import Reviewer from "@/components/reviewer";
 
-export default async function ReviewerPage({ params }: ReviewerPageProp) {
-  const { reviewerId } = await params;
+export default async function ReviewerPage() {
   return (
-    <div>{reviewerId}</div>
+    <Reviewer />
   );
 }
