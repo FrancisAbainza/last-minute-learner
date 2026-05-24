@@ -1,5 +1,6 @@
 "use client";
 
+import { ReviewerData } from "@/schemas/reviewer-schema";
 import { useQuery } from "@tanstack/react-query";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -9,8 +10,11 @@ export default function Reviewer() {
 
   const { data: reviewer, isPending, error } = useQuery({
     queryKey: ['reviewers', reviewerId],
-    queryFn: () => fetch(`/api/reviewers/${reviewerId}`).then(r => r.json()),
+    queryFn: (): Promise<ReviewerData> => fetch(`/api/reviewers/${reviewerId}`).then(r => r.json()),
+    enabled: !!reviewerId,
   })
+
+  console.log(reviewer)
 
   if (!reviewerId || isPending) return (
     <div className="flex items-center justify-center py-24 gap-2 text-muted-foreground">
