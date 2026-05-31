@@ -1,13 +1,13 @@
 "use client";
 
-import { resolvePrompt } from "@/services/ai/prompt-resolver";
+import { executeConfirmedAction } from "@/services/ai/prompt-resolver";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-export function useResolvePromptMutation() {
+export function useExecuteActionMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: resolvePrompt,
+    mutationFn: executeConfirmedAction,
 
     onSuccess: () => {
       queryClient.invalidateQueries({

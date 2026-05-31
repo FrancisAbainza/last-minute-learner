@@ -5,17 +5,30 @@ import { gateway, generateText, tool } from "ai";
 import { z } from "zod";
 import { generateReviewer } from "./reviewer-generator";
 import { redirect } from "next/navigation";
-import { ReviewerData } from "@/schemas/reviewer-schema";
+import { ReviewerData, ReviewerOutput } from "@/schemas/reviewer-schema";
 
 const model = gateway("openai/gpt-4o-mini");
 const BACKEND_URL = process.env.FLASK_API_URL ?? "http://localhost:5000";
 const SERVICE_SECRET = process.env.INTERNAL_SERVICE_SECRET ?? "";
 
-type ToolResponse = {
-  success: boolean;
-  message: string;
-  redirectTo?: string;
-};
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type PendingAction =
+  | { type: "createReviewer"; prompt: string; reviewerTitle: string; reviewerData: ReviewerOutput }
+  | { type: "deleteReviewer"; reviewerId: string; reviewerTitle?: string }
+  | { type: "openReviewer"; reviewerId: string; reviewerTitle?: string };
+
+export type DoneResult = { status: "done"; success: boolean; message: string }
+
+export type ResolveResult =
+  | DoneResult
+  | { status: "confirm"; pendingAction: PendingAction; message: string };
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const SYSTEM_MESSAGE = `
 You are a helpful assistant with access to reviewer management tools.
@@ -37,9 +50,13 @@ Rules:
 - When opening, use the openReviewer tool
 `.trim();
 
-export async function resolvePrompt(prompt: string) {
+// ---------------------------------------------------------------------------
+// resolvePrompt — plans the action, does NOT execute it
+// ---------------------------------------------------------------------------
+
+export async function resolvePrompt(prompt: string): Promise<ResolveResult> {
   const { userId } = await auth();
-  if (!userId) return { success: false, message: "Unauthorized" };
+  if (!userId) return { status: "done", success: false, message: "Unauthorized" };
 
   const serviceHeaders: Record<string, string> = {
     "Content-Type": "application/json",
@@ -47,7 +64,6 @@ export async function resolvePrompt(prompt: string) {
     "X-Service-Secret": SERVICE_SECRET,
   };
 
-  // Fetched once and reused across tools that need it
   const getReviewers = (() => {
     let cache: ReviewerData[] | null = null;
     return async () => {
@@ -59,64 +75,30 @@ export async function resolvePrompt(prompt: string) {
     };
   })();
 
+  // Tools WITHOUT execute — model plans but does not run anything
   const tools = {
     createReviewer: tool({
       description: "Create a new reviewer from a natural language prompt",
       inputSchema: z.object({ prompt: z.string() }),
-      execute: async ({ prompt }): Promise<ToolResponse> => {
-        try {
-          const reviewer = await generateReviewer(prompt);
-          const res = await fetch(`${BACKEND_URL}/reviewers`, {
-            method: "POST",
-            headers: serviceHeaders,
-            body: JSON.stringify(reviewer),
-          });
-          if (!res.ok) {
-            const err = (await res.json().catch(() => ({}))) as { message?: string };
-            throw new Error(err.message ?? `HTTP ${res.status}`);
-          }
-          return { success: true, message: "Reviewer created successfully." };
-        } catch (err) {
-          return { success: false, message: err instanceof Error ? err.message : "Failed to create reviewer." };
-        }
-      },
     }),
-
     deleteReviewer: tool({
       description: "Delete a reviewer by ID",
-      // The model now resolves the correct ID itself, given the reviewer list in context
       inputSchema: z.object({ reviewerId: z.string().uuid() }),
-      execute: async ({ reviewerId }): Promise<ToolResponse> => {
-        try {
-          const res = await fetch(`${BACKEND_URL}/reviewers/${reviewerId}`, {
-            method: "DELETE",
-            headers: serviceHeaders,
-          });
-          if (!res.ok) {
-            const err = (await res.json().catch(() => ({}))) as { message?: string };
-            throw new Error(err.message ?? `HTTP ${res.status}`);
-          }
-          return { success: true, message: "Reviewer deleted successfully." };
-        } catch (err) {
-          return { success: false, message: err instanceof Error ? err.message : "Failed to delete reviewer." };
-        }
-      },
     }),
-
     openReviewer: tool({
       description: "Open a reviewer page by ID",
       inputSchema: z.object({ reviewerId: z.string().uuid() }),
-      execute: async ({ reviewerId }): Promise<ToolResponse> => {
-        return { success: true, message: "Opening reviewer...", redirectTo: `/reviewers/${reviewerId}` };
-      },
     }),
   };
 
   try {
-    // Inject the reviewer list into the prompt so the model can resolve IDs directly
     const reviewers = await getReviewers();
     const reviewerContext = reviewers.length
-      ? `\n\nAvailable reviewers:\n${JSON.stringify(reviewers.map(({ id, title, description, field }) => ({ id, title, description, field })), null, 2)}`
+      ? `\n\nAvailable reviewers:\n${JSON.stringify(
+        reviewers.map(({ id, title, description, field }) => ({ id, title, description, field })),
+        null,
+        2
+      )}`
       : "\n\nNo reviewers exist yet.";
 
     const result = await generateText({
@@ -124,26 +106,127 @@ export async function resolvePrompt(prompt: string) {
       system: SYSTEM_MESSAGE + reviewerContext,
       prompt,
       tools,
+      maxRetries: 0,
       allowSystemInMessages: false,
     });
 
-    const output = result.toolResults?.[0]?.output as Partial<ToolResponse> | undefined;
-
-    if (!output) {
+    const toolCall = result.toolCalls?.[0];
+    if (!toolCall) {
       return {
+        status: "done",
         success: false,
         message: "I couldn't determine the correct action. Please specify whether you want to create, delete, or open a reviewer.",
       };
     }
 
-    if (output.redirectTo) redirect(output.redirectTo);
+    // -- openReviewer: enrich with title from already-fetched reviewer list --
+    if (toolCall.toolName === "openReviewer") {
+      const input = toolCall.input as { reviewerId: string }
+      const reviewer = reviewers.find((r) => r.id === input.reviewerId)
+      return {
+        status: "confirm",
+        pendingAction: {
+          type: "openReviewer",
+          reviewerId: input.reviewerId,
+          reviewerTitle: reviewer?.title,
+        },
+        message: `Open reviewer "${reviewer?.title ?? input.reviewerId}"?`,
+      }
+    }
 
+    // -- createReviewer: run generateReviewer now so title is ready for dialog --
+    if (toolCall.toolName === "createReviewer") {
+      const input = toolCall.input as { prompt: string }
+      const reviewerData = await generateReviewer(input.prompt)
+      return {
+        status: "confirm",
+        pendingAction: {
+          type: "createReviewer",
+          prompt: input.prompt,
+          reviewerTitle: reviewerData.title,
+          reviewerData,
+        },
+        message: `Create reviewer "${reviewerData.title}"?`,
+      }
+    }
+
+    // -- deleteReviewer: enrich with title from already-fetched reviewer list --
+    if (toolCall.toolName === "deleteReviewer") {
+      const input = toolCall.input as { reviewerId: string }
+      const reviewer = reviewers.find((r) => r.id === input.reviewerId)
+      return {
+        status: "confirm",
+        pendingAction: {
+          type: "deleteReviewer",
+          reviewerId: input.reviewerId,
+          reviewerTitle: reviewer?.title,
+        },
+        message: `Permanently delete reviewer "${reviewer?.title ?? input.reviewerId}"?`,
+      }
+    }
+
+    return { status: "done", success: false, message: "Unknown action." };
+  } catch (err) {
     return {
-      success: output.success ?? true,
-      message: output.message ?? "Action completed.",
+      status: "done",
+      success: false,
+      message: err instanceof Error ? err.message : "An unexpected error occurred.",
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// executeConfirmedAction — runs the action after the user confirms
+// ---------------------------------------------------------------------------
+
+export async function executeConfirmedAction(action: PendingAction): Promise<DoneResult> {
+  const { userId } = await auth();
+  if (!userId) return { status: "done", success: false, message: "Unauthorized" };
+
+  const serviceHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-User-Id": userId,
+    "X-Service-Secret": SERVICE_SECRET,
+  };
+
+  try {
+    switch (action.type) {
+      case "createReviewer": {
+        // Reuse pre-generated reviewerData — no second generateReviewer() call needed
+        const res = await fetch(`${BACKEND_URL}/reviewers`, {
+          method: "POST",
+          headers: serviceHeaders,
+          body: JSON.stringify(action.reviewerData),
+        });
+        if (!res.ok) {
+          const err = (await res.json().catch(() => ({}))) as { message?: string };
+          throw new Error(err.message ?? `HTTP ${res.status}`);
+        }
+        return { status: "done", success: true, message: "Reviewer created successfully." };
+      }
+
+      case "deleteReviewer": {
+        const res = await fetch(`${BACKEND_URL}/reviewers/${action.reviewerId}`, {
+          method: "DELETE",
+          headers: serviceHeaders,
+        });
+        if (!res.ok) {
+          const err = (await res.json().catch(() => ({}))) as { message?: string };
+          throw new Error(err.message ?? `HTTP ${res.status}`);
+        }
+        return { status: "done", success: true, message: "Reviewer deleted successfully." };
+      }
+
+      case "openReviewer": {
+        redirect(`/reviewers/${action.reviewerId}`);
+      }
+    }
   } catch (err) {
     if (err instanceof Error && (err as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw err;
-    return { success: false, message: err instanceof Error ? err.message : "An unexpected error occurred." };
+    return {
+      status: "done",
+      success: false,
+      message: err instanceof Error ? err.message : "An unexpected error occurred.",
+    };
   }
 }
