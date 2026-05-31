@@ -183,6 +183,7 @@ export function ChatUpload({
   const handleCancel = () => {
     setPendingAction(null)
     setConfirmMessage("")
+    speechSynthesis.cancel()
   }
 
   return (
