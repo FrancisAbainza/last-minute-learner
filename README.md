@@ -1,9 +1,10 @@
 <p align="center">
-  <img src="./logo.png" alt="Last Minute Learner" width="60" style="vertical-align: middle;">
-  <strong style="font-size:32px; vertical-align: middle;">
-    Last Minute Learner
-  </strong>
+  <img src="./logo.png" alt="Last Minute Learner Logo" width="169" />
 </p>
+
+<h1 align="center">
+  <a href="https://last-minute-learner.vercel.app/" target="_blank">Last Minute Learner</a>
+</h1>
 
 A study companion web app that turns uploaded documents and topic prompts into AI-generated learning materials, including reviewers, flashcards, and quizzes.
 
