@@ -17,6 +17,8 @@ CORS(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
 }
 
 db = SQLAlchemy(app)
@@ -28,15 +30,17 @@ db = SQLAlchemy(app)
 # =========================
 _SERVICE_SECRET = os.getenv("INTERNAL_SERVICE_SECRET")
 
+
 def require_auth(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        secret  = request.headers.get("X-Service-Secret", "")
+        secret = request.headers.get("X-Service-Secret", "")
         user_id = request.headers.get("X-User-Id", "")
         if not secret or secret != _SERVICE_SECRET or not user_id:
             return jsonify({"message": "Unauthorized"}), 401
         g.user_id = user_id
         return f(*args, **kwargs)
+
     return wrapper
 
 
@@ -46,27 +50,27 @@ def require_auth(f):
 class Reviewer(db.Model):
     __tablename__ = "reviewers"
 
-    id          = db.Column(db.String,       primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id     = db.Column(db.String(255),  nullable=False)
-    title       = db.Column(db.Text,         nullable=False)
-    description = db.Column(db.Text,         nullable=False)
-    field       = db.Column(db.String(255),  nullable=False)
-    reviewer    = db.Column(db.JSON,         nullable=False)
-    flashcards  = db.Column(db.JSON,         nullable=False)
-    quiz        = db.Column(db.JSON,         nullable=False)
-    created_at  = db.Column(db.DateTime,     server_default=db.func.now())
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(255), nullable=False)
+    title = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    field = db.Column(db.String(255), nullable=False)
+    reviewer = db.Column(db.JSON, nullable=False)
+    flashcards = db.Column(db.JSON, nullable=False)
+    quiz = db.Column(db.JSON, nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     def to_dict(self):
         return {
-            "id":          self.id,
-            "user_id":     self.user_id,
-            "title":       self.title,
+            "id": self.id,
+            "user_id": self.user_id,
+            "title": self.title,
             "description": self.description,
-            "field":       self.field,
-            "reviewer":    self.reviewer,
-            "flashcards":  self.flashcards,
-            "quiz":        self.quiz,
-            "created_at":  self.created_at.isoformat(),
+            "field": self.field,
+            "reviewer": self.reviewer,
+            "flashcards": self.flashcards,
+            "quiz": self.quiz,
+            "created_at": self.created_at.isoformat(),
         }
 
 
@@ -111,7 +115,11 @@ def create_reviewer():
 @app.route("/reviewers", methods=["GET"])
 @require_auth
 def get_user_reviewers():
-    reviewers = Reviewer.query.filter_by(user_id=g.user_id).order_by(Reviewer.created_at.desc()).all()
+    reviewers = (
+        Reviewer.query.filter_by(user_id=g.user_id)
+        .order_by(Reviewer.created_at.desc())
+        .all()
+    )
     return jsonify([r.to_dict() for r in reviewers])
 
 
@@ -123,9 +131,15 @@ def get_user_reviewers():
 def get_reviewer(id):
     reviewer = db.session.get(Reviewer, id)
     if not reviewer:
-        return jsonify({"message": "The reviewer you are looking for does not exist in the database."}), 404
+        return jsonify(
+            {
+                "message": "The reviewer you are looking for does not exist in the database."
+            }
+        ), 404
     if reviewer.user_id != g.user_id:
-        return jsonify({"message": "You are not authorized to access this reviewer."}), 403
+        return jsonify(
+            {"message": "You are not authorized to access this reviewer."}
+        ), 403
     return jsonify(reviewer.to_dict())
 
 
@@ -137,9 +151,15 @@ def get_reviewer(id):
 def delete_reviewer(id):
     reviewer = db.session.get(Reviewer, id)
     if not reviewer:
-        return jsonify({"message": "The reviewer you are looking for does not exist in the database."}), 404
+        return jsonify(
+            {
+                "message": "The reviewer you are looking for does not exist in the database."
+            }
+        ), 404
     if reviewer.user_id != g.user_id:
-        return jsonify({"message": "You are not authorized to delete this reviewer."}), 403
+        return jsonify(
+            {"message": "You are not authorized to delete this reviewer."}
+        ), 403
 
     db.session.delete(reviewer)
     db.session.commit()
