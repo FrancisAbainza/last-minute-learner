@@ -123,6 +123,17 @@ export async function resolvePrompt(prompt: string): Promise<ResolveResult> {
     if (toolCall.toolName === "openReviewer") {
       const input = toolCall.input as { reviewerId: string }
       const reviewer = reviewers.find((r) => r.id === input.reviewerId)
+      
+      if (!reviewer) {
+        return {
+          status: "done",
+          success: false,
+          message: reviewers.length === 0
+            ? "You don't have any reviewers yet. Create one first!"
+            : "That reviewer could not be found.",
+        }
+      }
+
       return {
         status: "confirm",
         pendingAction: {

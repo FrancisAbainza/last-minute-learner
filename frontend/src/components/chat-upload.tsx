@@ -95,6 +95,7 @@ export function ChatUpload({
     if (listening) {
       SpeechRecognition.stopListening()
     } else {
+      speechSynthesis.cancel()
       resetTranscript()
       SpeechRecognition.startListening({ continuous: true })
     }
